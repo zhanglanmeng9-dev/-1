@@ -1,0 +1,450 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arix Signature Luxury Tree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Babel for in-browser JSX transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #020202;
+        color: #fff;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      ::selection {
+        background: #D4AF37;
+        color: #000;
+      }
+      /* Custom scrollbar for loader if needed */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #020202;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #D4AF37;
+      }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
+        "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
+        "three": "https://esm.sh/three@^0.182.0",
+        "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@^3.0.4"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import * as THREE from 'three';
+      import { Canvas, useFrame } from '@react-three/fiber';
+      import { OrbitControls, PerspectiveCamera, Environment, Loader, Sphere, MeshDistortMaterial } from '@react-three/drei';
+      import { Bloom, EffectComposer, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing';
+
+      // --- CONSTANTS & HELPERS ---
+      const COLORS = {
+        EMERALD_DEEP: '#013220',
+        EMERALD_BRIGHT: '#0B6623',
+        EMERALD_LIGHT: '#50C878',
+        GOLD_METALLIC: '#D4AF37',
+        GOLD_CHAMPAGNE: '#F7E7CE',
+        GOLD_AMBER: '#FFBF00',
+        RUBY: '#E0115F',
+        SAPPHIRE: '#0F52BA',
+        AMETHYST: '#9966CC',
+        DIAMOND: '#FFFFFF',
+      };
+
+      const COUNTS = {
+        CANOPY: 45000,
+        GOLD: 800,
+        GEMS: 300,
+        DUST: 15000,
+      };
+
+      const getTreePosition = (index, total, noise = 0.5) => {
+        // Reduced height from 12 to 9.5 and radius from 5 to 4 to make the tree smaller
+        const height = 9.5;
+        const radius = 4;
+        const t = 1 - (index / total);
+        const y = t * height;
+        const angle = index * 0.15 + (Math.random() * 0.1);
+        const spiralRadius = (1 - t) * radius * (0.5 + Math.random() * 0.5);
+        const x = Math.cos(angle) * spiralRadius + (Math.random() - 0.5) * noise;
+        const z = Math.sin(angle) * spiralRadius + (Math.random() - 0.5) * noise;
+        
+        // Vertical shift maintained at -6
+        return new THREE.Vector3(x, y - 6, z);
+      };
+
+      // --- COMPONENTS ---
+
+      const Overlay = ({ isAssembled, onToggle }) => (
+        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-8 md:p-16 z-10">
+          <header className="flex justify-between items-start">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-5xl font-light tracking-[0.2em] text-white/90">
+                ARIX <span className="text-[#D4AF37]">SIGNATURE</span>
+              </h1>
+              <p className="text-xs tracking-[0.4em] text-white/40 uppercase">Ultra-Luxury Particle Installation</p>
+            </div>
+            <div className="text-right hidden md:block">
+              <p className="text-[10px] tracking-widest text-white/30 uppercase">EST. 2024</p>
+              <p className="text-[10px] tracking-widest text-white/30 uppercase">Collection Edition No. 001</p>
+            </div>
+          </header>
+
+          <div className="flex flex-col items-center justify-center space-y-8">
+            {!isAssembled && (
+              <div className="text-center animate-pulse">
+                <p className="text-sm tracking-[0.3em] text-white/60 mb-2">INITIALIZING ENERGY FIELD</p>
+              </div>
+            )}
+          </div>
+
+          <footer className="flex flex-col md:flex-row justify-between items-end space-y-4 md:space-y-0">
+            <div className="max-w-xs text-[10px] leading-relaxed tracking-widest text-white/40 uppercase order-2 md:order-1">
+              Crafted with 60,000+ active particles, high-density emerald canopies, and gold-flecked constellations.
+            </div>
+            
+            <button
+              onClick={onToggle}
+              className="pointer-events-auto group relative overflow-hidden px-10 py-4 bg-transparent border border-white/20 transition-all hover:border-[#D4AF37] order-1 md:order-2"
+            >
+              <div className="absolute inset-0 bg-[#D4AF37] scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500 opacity-20" />
+              <span className="relative text-xs tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-300">
+                {isAssembled ? 'RELEASE CORE' : 'ASSEMBLE STRUCTURE'}
+              </span>
+            </button>
+          </footer>
+        </div>
+      );
+
+      const EnergyApex = ({ assembled }) => {
+        const coreRef = useRef();
+        const ringRef1 = useRef();
+        const ringRef2 = useRef();
+
+        useFrame((state) => {
+          if (!coreRef.current) return;
+          const t = state.clock.getElapsedTime();
+          coreRef.current.visible = assembled;
+          if (!assembled) return;
+          // Adjusted y to 3.5 to match the new tree top (9.5 - 6 = 3.5)
+          coreRef.current.position.y = 3.5 + Math.sin(t * 2) * 0.1;
+          coreRef.current.scale.setScalar(0.7 + Math.sin(t * 5) * 0.05); // Slightly smaller scale for apex too
+          if (ringRef1.current) {
+            ringRef1.current.rotation.x = t * 2;
+            ringRef1.current.rotation.y = t * 1.5;
+          }
+          if (ringRef2.current) {
+            ringRef2.current.rotation.z = t * 2.5;
+            ringRef2.current.rotation.x = t * 1.2;
+          }
+        });
+
+        return (
+          <group ref={coreRef}>
+            <Sphere args={[0.5, 64, 64]}>
+              <MeshDistortMaterial
+                color={COLORS.GOLD_AMBER}
+                emissive={COLORS.GOLD_CHAMPAGNE}
+                emissiveIntensity={10}
+                speed={3}
+                distort={0.4}
+                radius={1}
+              />
+            </Sphere>
+            <mesh ref={ringRef1}>
+              <torusGeometry args={[0.8, 0.02, 16, 100]} />
+              <meshBasicMaterial color={COLORS.GOLD_CHAMPAGNE} />
+            </mesh>
+            <mesh ref={ringRef2}>
+              <torusGeometry args={[1.1, 0.015, 16, 100]} />
+              <meshBasicMaterial color={COLORS.GOLD_AMBER} />
+            </mesh>
+            <pointLight intensity={20} distance={10} color={COLORS.GOLD_AMBER} />
+          </group>
+        );
+      };
+
+      const SparkleDust = ({ assembled }) => {
+        const pointsRef = useRef();
+        const { positions, velocities } = useMemo(() => {
+          const pos = new Float32Array(COUNTS.DUST * 3);
+          const vel = new Float32Array(COUNTS.DUST * 3);
+          for (let i = 0; i < COUNTS.DUST; i++) {
+            pos[i * 3] = (Math.random() - 0.5) * 20;
+            pos[i * 3 + 1] = (Math.random() - 0.5) * 20;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 20;
+            vel[i * 3] = (Math.random() - 0.5) * 0.02;
+            vel[i * 3 + 1] = Math.random() * 0.05;
+            vel[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+          }
+          return { positions: pos, velocities: vel };
+        }, []);
+
+        useFrame((state) => {
+          if (!pointsRef.current) return;
+          const attr = pointsRef.current.geometry.attributes.position;
+          const time = state.clock.getElapsedTime();
+          for (let i = 0; i < COUNTS.DUST; i++) {
+            const idx = i * 3;
+            attr.array[idx] += velocities[idx];
+            attr.array[idx + 1] += velocities[idx + 1] + Math.sin(time + i) * 0.005;
+            attr.array[idx + 2] += velocities[idx + 2];
+            if (attr.array[idx + 1] > 10) attr.array[idx + 1] = -10;
+            if (Math.abs(attr.array[idx]) > 10) attr.array[idx] *= -0.9;
+            if (Math.abs(attr.array[idx + 2]) > 10) attr.array[idx + 2] *= -0.9;
+          }
+          attr.needsUpdate = true;
+        });
+
+        return (
+          <points ref={pointsRef}>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" count={COUNTS.DUST} array={positions} itemSize={3} />
+            </bufferGeometry>
+            <pointsMaterial size={0.03} color={COLORS.GOLD_CHAMPAGNE} transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </points>
+        );
+      };
+
+      const GemsAndPrisms = ({ assembled }) => {
+        const meshRef = useRef();
+        const dummy = useMemo(() => new THREE.Object3D(), []);
+        const gemColors = [COLORS.RUBY, COLORS.SAPPHIRE, COLORS.AMETHYST, COLORS.EMERALD_LIGHT];
+        const data = useMemo(() => {
+          const arr = [];
+          for (let i = 0; i < COUNTS.GEMS; i++) {
+            arr.push({
+              pos: getTreePosition(i, COUNTS.GEMS, 0.2),
+              scatter: new THREE.Vector3((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60),
+              color: new THREE.Color(gemColors[Math.floor(Math.random() * gemColors.length)]),
+              scale: 0.1 + Math.random() * 0.2,
+              speed: 0.5 + Math.random() * 0.5
+            });
+          }
+          return arr;
+        }, []);
+
+        const progress = useRef(0);
+        useFrame((state, delta) => {
+          if (!meshRef.current) return;
+          const target = assembled ? 1 : 0;
+          progress.current = THREE.MathUtils.lerp(progress.current, target, delta * 1.0);
+          const time = state.clock.getElapsedTime();
+          data.forEach((d, i) => {
+            const x = THREE.MathUtils.lerp(d.scatter.x, d.pos.x, progress.current);
+            const y = THREE.MathUtils.lerp(d.scatter.y, d.pos.y, progress.current);
+            const z = THREE.MathUtils.lerp(d.scatter.z, d.pos.z, progress.current);
+            dummy.position.set(x, y, z);
+            dummy.rotation.y = time * d.speed;
+            dummy.rotation.x = time * d.speed * 0.5;
+            dummy.scale.setScalar(d.scale * (1 + Math.sin(time * 2 + i) * 0.1));
+            dummy.updateMatrix();
+            meshRef.current.setMatrixAt(i, dummy.matrix);
+            meshRef.current.setColorAt(i, d.color);
+          });
+          meshRef.current.instanceMatrix.needsUpdate = true;
+          if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+        });
+
+        return (
+          <instancedMesh ref={meshRef} args={[null, null, COUNTS.GEMS]}>
+            <octahedronGeometry args={[0.3, 0]} />
+            <meshStandardMaterial metalness={0.9} roughness={0.05} emissiveIntensity={2} transparent opacity={0.9} />
+          </instancedMesh>
+        );
+      };
+
+      const GoldOrnaments = ({ assembled }) => {
+        const meshRef = useRef();
+        const dummy = useMemo(() => new THREE.Object3D(), []);
+        const { positions, scatterPositions, rotations, scales } = useMemo(() => {
+          const pos = [], scatter = [], rot = [], scl = [];
+          for (let i = 0; i < COUNTS.GOLD; i++) {
+            pos.push(getTreePosition(i, COUNTS.GOLD, 0.4));
+            scatter.push(new THREE.Vector3((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 50));
+            rot.push(new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI));
+            scl.push(0.1 + Math.random() * 0.4);
+          }
+          return { positions: pos, scatterPositions: scatter, rotations: rot, scales: scl };
+        }, []);
+
+        const progress = useRef(0);
+        useFrame((state, delta) => {
+          if (!meshRef.current) return;
+          const target = assembled ? 1 : 0;
+          progress.current = THREE.MathUtils.lerp(progress.current, target, delta * 1.2);
+          const time = state.clock.getElapsedTime();
+          for (let i = 0; i < COUNTS.GOLD; i++) {
+            const p = positions[i], s = scatterPositions[i];
+            const x = THREE.MathUtils.lerp(s.x, p.x, progress.current);
+            const y = THREE.MathUtils.lerp(s.y, p.y + Math.sin(time * 0.5 + i) * 0.1, progress.current);
+            const z = THREE.MathUtils.lerp(s.z, p.z, progress.current);
+            dummy.position.set(x, y, z);
+            dummy.rotation.set(rotations[i].x + time * 0.2, rotations[i].y + time * 0.3, rotations[i].z);
+            dummy.scale.setScalar(scales[i] * (0.8 + Math.sin(time + i) * 0.2));
+            dummy.updateMatrix();
+            meshRef.current.setMatrixAt(i, dummy.matrix);
+          }
+          meshRef.current.instanceMatrix.needsUpdate = true;
+        });
+
+        return (
+          <instancedMesh ref={meshRef} args={[null, null, COUNTS.GOLD]}>
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshStandardMaterial color={COLORS.GOLD_METALLIC} metalness={1} roughness={0.1} emissive={COLORS.GOLD_AMBER} emissiveIntensity={0.5} />
+          </instancedMesh>
+        );
+      };
+
+      const CoreCanopy = ({ assembled }) => {
+        const pointsRef = useRef();
+        const { positions, colors, sizes, scatterPositions, noiseOffsets } = useMemo(() => {
+          const pos = new Float32Array(COUNTS.CANOPY * 3);
+          const scatter = new Float32Array(COUNTS.CANOPY * 3);
+          const col = new Float32Array(COUNTS.CANOPY * 3);
+          const size = new Float32Array(COUNTS.CANOPY);
+          const noise = new Float32Array(COUNTS.CANOPY * 3);
+          const palette = [new THREE.Color(COLORS.EMERALD_DEEP), new THREE.Color(COLORS.EMERALD_BRIGHT), new THREE.Color(COLORS.EMERALD_LIGHT)];
+          for (let i = 0; i < COUNTS.CANOPY; i++) {
+            const targetPos = getTreePosition(i, COUNTS.CANOPY, 1.2);
+            pos[i * 3] = targetPos.x; pos[i * 3 + 1] = targetPos.y; pos[i * 3 + 2] = targetPos.z;
+            const phi = Math.acos(-1 + (2 * i) / COUNTS.CANOPY);
+            const theta = Math.sqrt(COUNTS.CANOPY * Math.PI) * phi;
+            const radius = 15 + Math.random() * 25;
+            scatter[i * 3] = radius * Math.cos(theta) * Math.sin(phi);
+            scatter[i * 3 + 1] = radius * Math.sin(theta) * Math.sin(phi);
+            scatter[i * 3 + 2] = radius * Math.cos(phi);
+            noise[i * 3] = Math.random() * Math.PI * 2;
+            noise[i * 3 + 1] = Math.random() * Math.PI * 2;
+            noise[i * 3 + 2] = Math.random() * Math.PI * 2;
+            const color = palette[Math.floor(Math.random() * palette.length)].clone();
+            color.multiplyScalar(0.4 + Math.random() * 0.6);
+            col[i * 3] = color.r; col[i * 3 + 1] = color.g; col[i * 3 + 2] = color.b;
+            const rand = Math.random();
+            size[i] = rand < 0.85 ? 0.015 : rand < 0.98 ? 0.05 : 0.15;
+          }
+          return { positions: pos, colors: col, sizes: size, scatterPositions: scatter, noiseOffsets: noise };
+        }, []);
+
+        const progress = useRef(0);
+        useFrame((state, delta) => {
+          if (!pointsRef.current) return;
+          const target = assembled ? 1 : 0;
+          progress.current = THREE.MathUtils.lerp(progress.current, target, delta * 0.8);
+          const positionsAttr = pointsRef.current.geometry.attributes.position;
+          const time = state.clock.getElapsedTime();
+          for (let i = 0; i < COUNTS.CANOPY; i++) {
+            const idx = i * 3;
+            const driftX = Math.sin(time * 0.1 + noiseOffsets[idx]) * 2 * (1 - progress.current);
+            const driftY = Math.cos(time * 0.15 + noiseOffsets[idx + 1]) * 2 * (1 - progress.current);
+            const driftZ = Math.sin(time * 0.12 + noiseOffsets[idx + 2]) * 2 * (1 - progress.current);
+            const xTarget = positions[idx];
+            const yTarget = positions[idx + 1] + Math.sin(time + i * 0.01) * 0.05;
+            const zTarget = positions[idx + 2];
+            const xScatter = scatterPositions[idx] + driftX;
+            const yScatter = scatterPositions[idx + 1] + driftY;
+            const zScatter = scatterPositions[idx + 2] + driftZ;
+            positionsAttr.array[idx] = THREE.MathUtils.lerp(xScatter, xTarget, progress.current);
+            positionsAttr.array[idx + 1] = THREE.MathUtils.lerp(yScatter, yTarget, progress.current);
+            positionsAttr.array[idx + 2] = THREE.MathUtils.lerp(zScatter, zTarget, progress.current);
+          }
+          positionsAttr.needsUpdate = true;
+          if (progress.current < 0.99) {
+            pointsRef.current.rotation.y = time * 0.05 * (1 - progress.current);
+          } else {
+            pointsRef.current.rotation.y = THREE.MathUtils.lerp(pointsRef.current.rotation.y, 0, delta * 2);
+          }
+        });
+
+        return (
+          <points ref={pointsRef}>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" count={COUNTS.CANOPY} array={new Float32Array(scatterPositions)} itemSize={3} />
+              <bufferAttribute attach="attributes-color" count={COUNTS.CANOPY} array={colors} itemSize={3} />
+            </bufferGeometry>
+            <pointsMaterial size={0.05} vertexColors transparent opacity={0.7} sizeAttenuation={true} blending={THREE.AdditiveBlending} depthWrite={false} />
+          </points>
+        );
+      };
+
+      const TreeCanvas = ({ assembled }) => {
+        const groupRef = useRef();
+        useFrame((state) => {
+          if (groupRef.current) {
+            const t = state.clock.getElapsedTime();
+            groupRef.current.position.y = Math.sin(t * 0.5) * 0.1;
+            groupRef.current.rotation.y = Math.sin(t * 0.2) * 0.05;
+          }
+        });
+
+        return (
+          <>
+            <group ref={groupRef}>
+              <CoreCanopy assembled={assembled} />
+              <GoldOrnaments assembled={assembled} />
+              <GemsAndPrisms assembled={assembled} />
+              <SparkleDust assembled={assembled} />
+              <EnergyApex assembled={assembled} />
+            </group>
+            <EffectComposer multisampling={4}>
+              <Bloom intensity={1.5} luminanceThreshold={0.8} luminanceSmoothing={0.1} mipmapBlur />
+              <ChromaticAberration offset={new THREE.Vector2(0.0005, 0.0005)} />
+              <Noise opacity={0.02} />
+              <Vignette eskil={false} offset={0.1} darkness={1.1} />
+            </EffectComposer>
+          </>
+        );
+      };
+
+      const App = () => {
+        const [isAssembled, setIsAssembled] = useState(false);
+        return (
+          <div className="relative w-full h-screen bg-[#020202]">
+            <Canvas gl={{ antialias: true, alpha: false, stencil: false, depth: true }} dpr={[1, 2]}>
+              <color attach="background" args={['#020202']} />
+              <Suspense fallback={null}>
+                <PerspectiveCamera makeDefault position={[0, 4, 18]} fov={35} />
+                <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 1.5} minDistance={10} maxDistance={35} autoRotate={isAssembled} autoRotateSpeed={0.5} />
+                <ambientLight intensity={0.2} />
+                <pointLight position={[10, 10, 10]} intensity={2} color="#D4AF37" />
+                <pointLight position={[-10, 5, -10]} intensity={1.5} color="#0B6623" />
+                <spotLight position={[0, 20, 0]} intensity={5} angle={0.5} penumbra={1} color="#ffffff" />
+                <TreeCanvas assembled={isAssembled} />
+                <Environment preset="city" />
+              </Suspense>
+            </Canvas>
+            <Overlay isAssembled={isAssembled} onToggle={() => setIsAssembled(!isAssembled)} />
+            <Loader containerStyles={{ background: '#020202' }} innerStyles={{ background: '#D4AF37' }} barStyles={{ background: '#D4AF37' }} />
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

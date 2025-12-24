@@ -1,0 +1,1 @@
+// This file is now empty as the project has been consolidated into index.html.
